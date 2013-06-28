@@ -13,13 +13,15 @@ OmfCommon.init(:development, communication: { url: 'xmpp://beta:1234@localhost' 
 
     comm.subscribe('cmController') do |controller|
       unless controller.error?
-        
+        controller.configure(state: {node: :node107, status: :started})
+        sleep 20
+        controller.configure(state: {node: :node107, status: :stopped})
       else
         error controller.inspect
       end
     end
 
-    OmfCommon.eventloop.after(10) { comm.disconnect }
+    #OmfCommon.eventloop.after(20) { comm.disconnect }
     comm.on_interrupted { comm.disconnect }
   end
 end
