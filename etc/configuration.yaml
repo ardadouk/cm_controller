@@ -1,12 +1,28 @@
 :xmpp:
-  :username: user_rc
+  :username: cm_rc
   :password: pw
   :server: localhost
 :auth:
   :root_cert_dir: ~/.omf/trusted_roots
   :entity_cert: ~/.omf/urc.pem
   :entity_key: ~/.omf/user_rc_key.pem
+:domain:
+  :ip: 10.0.0.
 :nodes:
   :node1:
+    :ip: 10.0.0.1
+    :mac: 00-03-1d-0b-31-56
+    :cm_ip: 10.0.0.101
   :node2:
+    :ip: 10.0.0.2
+    :mac: 00-03-1d-0b-31-56
+    :cm_ip: 10.0.0.102
+  :node28:
+    :ip: 10.0.0.28
+    :mac: 00-03-1d-0b-31-56
+    :cm_ip: 10.0.0.128
+  :node107:
+    :ip: 10.0.0.1
+    :mac: 00-03-1d-0b-31-56
+    :cm_ip: 10.64.44.113
 
