@@ -33,11 +33,11 @@ module OmfRc::ResourceProxy::CMController
     end
   end
 
-  request :node_state do |res, value|
+  request :node_state do |res|
     node = nil
-    puts "#### value is #{value}"
+    puts "#### value is #{res.property.node_state}"
     res.property.all_nodes.each do |n|
-      if n[:node_name] == value
+      if n[:node_name] == res.property.node_state
         node = n
       end
     end
