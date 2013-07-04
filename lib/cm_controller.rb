@@ -35,6 +35,7 @@ module OmfRc::ResourceProxy::CMController
 
   request :node_state do |res, value|
     node = nil
+    puts value
     res.property.all_nodes.each do |n|
       if n[:node_name] == value
         node = n
@@ -48,10 +49,9 @@ module OmfRc::ResourceProxy::CMController
         exit_code: "-1",
         msg: "Wrong node name."
       }, :ALL)
-      return
+    else
+      res.get_status(node)
     end
-
-    res.get_status(node)
   end
 
   configure :state do |res, value|
