@@ -11,7 +11,7 @@ $stdout.sync = true
 @config = YAML.load_file('../etc/configuration.yaml')
 @auth = @config[:auth]
 @xmpp = @config[:xmpp]
-
+@timeout = 30
 
 module OmfRc::ResourceProxy::CMController
   include OmfRc::ResourceProxyDSL
@@ -31,6 +31,27 @@ module OmfRc::ResourceProxy::CMController
     end
   end
 
+  request :node_state do |res, value|
+    node = nil
+    res.property.all_nodes.each do |n|
+      if n[:node_name] == value[:node].to_sym
+        node = n
+      end
+    end
+    puts "Node : #{node}"
+    if node.nil?
+      puts "error: Node nill"
+      res.inform(:status, {
+        event_type: "EXIT",
+        exit_code: "-1",
+        msg: "Wrong node name."
+      }, :ALL)
+      return
+    end
+
+    res.get_status(node)
+  end
+
   configure :state do |res, value|
     node = nil
     res.property.all_nodes.each do |n|
@@ -42,22 +63,22 @@ module OmfRc::ResourceProxy::CMController
     if node.nil?
       puts "error: Node nill"
       res.inform(:status, {
-                        event_type: "EXIT",
-                        exit_code: "-1",
-                        msg: "Wrong node name."
-                      }, :ALL)
+        event_type: "EXIT",
+        exit_code: "-1",
+        msg: "Wrong node name."
+      }, :ALL)
       return
     end
 
     case value[:status].to_sym
-    when :started then res.start_node(node)
-    when :stopped then res.stop_node(node)
-    when :started_on_pxe then res.start_node_pxe(node)
-    when :started_without_pxe then res.start_node_pxe_off(node)
+    when :on then res.start_node(node)
+    when :off then res.stop_node(node)
+    when :reset then res.reset_node(node)
+    when :start_on_pxe then res.start_node_pxe(node)
+    when :start_without_pxe then res.start_node_pxe_off(node)
     else
       res.log_inform_warn "Cannot switch node to unknown state '#{value[:status].to_s}'!"
     end
-
   end
 
   work("pingable?") do |res, addr|
@@ -65,24 +86,48 @@ module OmfRc::ResourceProxy::CMController
     !output.include? "100% packet loss"
   end
 
+  work("get_status") do |res, node|
+    puts "http://#{node[:node_cm_ip].to_s}/status"
+    doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/status"))
+    puts doc
+
+    res.inform(:status, {
+      event_type: "NODE_STATUS",
+      node_name: "#{node[:node_name].to_s}",
+      msg: "#{doc.xpath("//Measurement//type//value")}"
+    }, :ALL)
+  end
+
   work("start_node") do |res, node|
     puts "http://#{node[:node_cm_ip].to_s}/on"
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/on"))
     puts doc
-    sleep 3
-    if res.pingable?("#{node[:node_ip].to_s}")
-      node[:status] = :started
-      res.inform(:status, {
-        event_type: "EXIT",
-        exit_code: "0",
-        msg: "Node is up."
-      }, :ALL)
-    else
-      res.inform(:status, {
-        event_type: "EXIT",
-        exit_code: "-1",
-        msg: "Node is closed."
-      }, :ALL)
+    t = 0
+    loop do
+      sleep 2
+      status = system("ping #{node[:node_ip]} -c 2 -w 2")
+      if t < @timeout
+        if status == true
+          node[:status] = :started
+          res.inform(:status, {
+            event_type: "EXIT",
+            exit_code: "0",
+            node_name: "#{node[:node_name].to_s}",
+            msg: "Node 'node[:node_name]' is up."
+          }, :ALL)
+          return
+        end
+      else
+        node[:status] = :stopped
+        res.inform(:error, {
+          event_type: "EXIT",
+          exit_code: "-1",
+          node_name: "#{node[:node_name].to_s}",
+          msg: "Node 'node[:node_name]' failed to start up."
+        }, :ALL)
+        return
+      end
+      t += 2
     end
   end
 
@@ -91,17 +136,20 @@ module OmfRc::ResourceProxy::CMController
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
     puts doc
     sleep 3
-    if !res.pingable?("#{node[:node_ip].to_s}")
+    status = system("ping #{node[:node_ip]} -c 2 -w 2")
+    if status == false
       node[:status] = :stopped
       res.inform(:status, {
         event_type: "EXIT",
         exit_code: "0",
+        node_name: "#{node[:node_name].to_s}",
         msg: "Node is closed."
       }, :ALL)
     else
       res.inform(:status, {
         event_type: "EXIT",
         exit_code: "-1",
+        node_name: "#{node[:node_name].to_s}",
         msg: "Node is up."
       }, :ALL)
     end
@@ -129,6 +177,34 @@ module OmfRc::ResourceProxy::CMController
     elsif node[:status] == :started_on_pxe
 
     end
+
+    t = 0
+    loop do
+      sleep 2
+      status = system("ping #{node[:node_ip]} -c 2 -w 2")
+      if t < @timeout
+        if status == true
+          node[:status] = :started_on_pxe
+          res.inform(:status, {
+            event_type: "PXE",
+            exit_code: "0",
+            node_name: "#{node[:node_name]}",
+            msg: "Node '#{node[:node_name]}' is up on pxe."
+          }, :ALL)
+          return
+        end
+      else
+        node[:status] = :stopped
+        res.inform(:error, {
+          event_type: "PXE",
+          exit_code: "-1",
+          node_name: "#{node[:node_name]}",
+          msg: "Node '#{node[:node_name]}' failed to boot on pxe."
+        }, :ALL)
+        return
+      end
+      t += 2
+    end
   end
 
   work("start_node_pxe_off") do |res, node|
@@ -141,8 +217,6 @@ module OmfRc::ResourceProxy::CMController
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
     puts doc
   end
-
-
 end
 
 
