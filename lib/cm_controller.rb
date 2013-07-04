@@ -1,3 +1,4 @@
+require 'time'
 require 'omf_rc'
 require 'omf_common'
 require 'yaml'
@@ -11,10 +12,10 @@ $stdout.sync = true
 @config = YAML.load_file('../etc/configuration.yaml')
 @auth = @config[:auth]
 @xmpp = @config[:xmpp]
-@timeout = 30
 
 module OmfRc::ResourceProxy::CMController
   include OmfRc::ResourceProxyDSL
+  @timeout = 30
 
   register_proxy :cmController
 
