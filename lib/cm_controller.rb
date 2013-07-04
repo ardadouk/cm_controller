@@ -180,7 +180,7 @@ module OmfRc::ResourceProxy::CMController
   end
 
   work("start_node_pxe") do |res, node|
-    symlink_name = "/tftpboot/pxe-linux.cfg/01-#{node[:node_mac]}"
+    symlink_name = "/tftpboot/pxelinux.cfg/01-#{node[:node_mac]}"
     if !File.exists?("#{symlink_name}")
       File.symlink("/tftpboot/pxelinux.cfg/omf-5.4", "#{symlink_name}")
     end
