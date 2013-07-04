@@ -114,7 +114,7 @@ module OmfRc::ResourceProxy::CMController
             event_type: "EXIT",
             exit_code: "0",
             node_name: "#{node[:node_name].to_s}",
-            msg: "Node 'node[:node_name]' is up."
+            msg: "Node '#{node[:node_name].to_s}' is up."
           }, :ALL)
           return
         end
@@ -124,7 +124,7 @@ module OmfRc::ResourceProxy::CMController
           event_type: "EXIT",
           exit_code: "-1",
           node_name: "#{node[:node_name].to_s}",
-          msg: "Node 'node[:node_name]' failed to start up."
+          msg: "Node '#{node[:node_name].to_s}' failed to start up."
         }, :ALL)
         return
       end
@@ -137,22 +137,32 @@ module OmfRc::ResourceProxy::CMController
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
     puts doc
     sleep 3
-    status = system("ping #{node[:node_ip]} -c 2 -w 2")
-    if status == false
-      node[:status] = :stopped
-      res.inform(:status, {
-        event_type: "EXIT",
-        exit_code: "0",
-        node_name: "#{node[:node_name].to_s}",
-        msg: "Node is closed."
-      }, :ALL)
-    else
-      res.inform(:status, {
-        event_type: "EXIT",
-        exit_code: "-1",
-        node_name: "#{node[:node_name].to_s}",
-        msg: "Node is up."
-      }, :ALL)
+    t = 0
+    loop do
+      sleep 2
+      status = system("ping #{node[:node_ip]} -c 2 -w 2")
+      if t < @timeout
+        if status == false
+          node[:status] = :started
+          res.inform(:status, {
+            event_type: "EXIT",
+            exit_code: "0",
+            node_name: "#{node[:node_name].to_s}",
+            msg: "Node '#{node[:node_name].to_s}' is down."
+          }, :ALL)
+          return
+        end
+      else
+        node[:status] = :stopped
+        res.inform(:error, {
+          event_type: "EXIT",
+          exit_code: "-1",
+          node_name: "#{node[:node_name].to_s}",
+          msg: "Node '#{node[:node_name].to_s}' failed to shut down."
+        }, :ALL)
+        return
+      end
+      t += 2
     end
   end
 
