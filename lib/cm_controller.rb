@@ -102,7 +102,7 @@ module OmfRc::ResourceProxy::CMController
       event_type: "NODE_STATUS",
       exit_code: "0",
       node_name: "#{node[:node_name].to_s}",
-      msg: "#{doc.xpath("//Measurement//type//value").content}"
+      msg: "#{doc.xpath("//Measurement//type//value").text}"
     }, :ALL)
   end
 
