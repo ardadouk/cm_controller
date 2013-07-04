@@ -116,7 +116,7 @@ module OmfRc::ResourceProxy::CMController
             node_name: "#{node[:node_name].to_s}",
             msg: "Node '#{node[:node_name].to_s}' is up."
           }, :ALL)
-          return
+          break
         end
       else
         node[:status] = :stopped
@@ -126,7 +126,7 @@ module OmfRc::ResourceProxy::CMController
           node_name: "#{node[:node_name].to_s}",
           msg: "Node '#{node[:node_name].to_s}' failed to start up."
         }, :ALL)
-        return
+        break
       end
       t += 2
     end
@@ -150,7 +150,7 @@ module OmfRc::ResourceProxy::CMController
             node_name: "#{node[:node_name].to_s}",
             msg: "Node '#{node[:node_name].to_s}' is down."
           }, :ALL)
-          return
+          break
         end
       else
         node[:status] = :stopped
@@ -160,7 +160,7 @@ module OmfRc::ResourceProxy::CMController
           node_name: "#{node[:node_name].to_s}",
           msg: "Node '#{node[:node_name].to_s}' failed to shut down."
         }, :ALL)
-        return
+        break
       end
       t += 2
     end
@@ -202,7 +202,7 @@ module OmfRc::ResourceProxy::CMController
             node_name: "#{node[:node_name]}",
             msg: "Node '#{node[:node_name]}' is up on pxe."
           }, :ALL)
-          return
+          break
         end
       else
         node[:status] = :stopped
@@ -212,7 +212,7 @@ module OmfRc::ResourceProxy::CMController
           node_name: "#{node[:node_name]}",
           msg: "Node '#{node[:node_name]}' failed to boot on pxe."
         }, :ALL)
-        return
+        break
       end
       t += 2
     end
