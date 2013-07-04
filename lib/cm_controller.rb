@@ -42,6 +42,7 @@ module OmfRc::ResourceProxy::CMController
       end
     end
     puts "Node : #{node}"
+    ret = false
     if node.nil?
       puts "error: Node nill"
       res.inform(:status, {
@@ -50,8 +51,9 @@ module OmfRc::ResourceProxy::CMController
         msg: "Wrong node name."
       }, :ALL)
     else
-      res.get_status(node)
+      ret = res.get_status(node)
     end
+    ret
   end
 
   configure :state do |res, value|
