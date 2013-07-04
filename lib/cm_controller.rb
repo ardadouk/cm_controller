@@ -36,7 +36,7 @@ module OmfRc::ResourceProxy::CMController
   request :node_state do |res, value|
     node = nil
     res.property.all_nodes.each do |n|
-      if n[:node_name] == value[:node].to_sym
+      if n[:node_name] == value
         node = n
       end
     end
