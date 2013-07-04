@@ -20,6 +20,7 @@ module OmfRc::ResourceProxy::CMController
   register_proxy :cmController
 
   property :all_nodes, :default => []
+  property :node_state
 
   hook :before_ready do |res|
     @config = YAML.load_file('../etc/configuration.yaml')
@@ -97,6 +98,7 @@ module OmfRc::ResourceProxy::CMController
       node_name: "#{node[:node_name].to_s}",
       msg: "#{doc.xpath("//Measurement//type//value")}"
     }, :ALL)
+    doc.xpath("//Measurement//type//value")
   end
 
   work("start_node") do |res, node|
