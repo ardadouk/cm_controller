@@ -182,7 +182,7 @@ module OmfRc::ResourceProxy::CMController
   work("start_node_pxe") do |res, node|
     symlink_name = "/tftpboot/pxe-linux.cfg/01-#{node[:node_mac]}"
     if !File.exists?(symlink_name)
-      File.symlink("/tftpboot/pxelinux.cfg/omf-5.4", symlink_name)
+      File.symlink(symlink_name, "/tftpboot/pxelinux.cfg/omf-5.4")
     end
     if node[:status] == :stopped
       puts "http://#{node[:node_cm_ip].to_s}/on"
