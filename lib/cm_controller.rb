@@ -33,28 +33,29 @@ module OmfRc::ResourceProxy::CMController
     end
   end
 
-  request :node_state do |res|
-    node = nil
-    puts "#### value is #{res.property.node_state}"
-    res.property.all_nodes.each do |n|
-      if n[:node_name] == res.property.node_state
-        node = n
-      end
-    end
-    puts "Node : #{node}"
-    ret = false
-    if node.nil?
-      puts "error: Node nill"
-      res.inform(:status, {
-        event_type: "EXIT",
-        exit_code: "-1",
-        msg: "Wrong node name."
-      }, :ALL)
-    else
-      ret = res.get_status(node)
-    end
-    ret
-  end
+#   request :node_state do |res|
+#     node = nil
+#     puts "#### value is #{res.property.node_state}"
+#     res.property.all_nodes.each do |n|
+#       if n[:node_name] == res.property.node_state
+#         node = n
+#       end
+#     end
+#     puts "Node : #{node}"
+#     ret = false
+#     if node.nil?
+#       puts "error: Node nill"
+#       res.inform(:status, {
+#         event_type: "EXIT",
+#         exit_code: "-1",
+#         node: value[:node],
+#         msg: "Wrong node name."
+#       }, :ALL)
+#     else
+#       ret = res.get_status(node)
+#     end
+#     ret
+#   end
 
   configure :state do |res, value|
     node = nil
@@ -69,6 +70,7 @@ module OmfRc::ResourceProxy::CMController
       res.inform(:status, {
         event_type: "EXIT",
         exit_code: "-1",
+        node: value[:node],
         msg: "Wrong node name."
       }, :ALL)
       return
@@ -80,6 +82,7 @@ module OmfRc::ResourceProxy::CMController
     when :reset then res.reset_node(node)
     when :start_on_pxe then res.start_node_pxe(node)
     when :start_without_pxe then res.start_node_pxe_off(node)
+    when :get_status then res.get_status(node)
     else
       res.log_inform_warn "Cannot switch node to unknown state '#{value[:status].to_s}'!"
     end
@@ -97,10 +100,10 @@ module OmfRc::ResourceProxy::CMController
 
     res.inform(:status, {
       event_type: "NODE_STATUS",
+      exit_code: "0",
       node_name: "#{node[:node_name].to_s}",
       msg: "#{doc.xpath("//Measurement//type//value")}"
     }, :ALL)
-    doc.xpath("//Measurement//type//value")
   end
 
   work("start_node") do |res, node|
@@ -190,7 +193,7 @@ module OmfRc::ResourceProxy::CMController
       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
       msg = doc
     elsif node[:status] == :started_on_pxe
-
+      #do nothing?
     end
 
     t = 0
