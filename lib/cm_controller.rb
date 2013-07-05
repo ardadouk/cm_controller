@@ -81,7 +81,7 @@ module OmfRc::ResourceProxy::CMController
     when :off then res.stop_node(node)
     when :reset then res.reset_node(node)
     when :start_on_pxe then res.start_node_pxe(node)
-    when :start_without_pxe then res.start_node_pxe_off(node)
+    when :start_without_pxe then res.start_node_pxe_off(node, value[:last_action])
     when :get_status then res.get_status(node)
     else
       res.log_inform_warn "Cannot switch node to unknown state '#{value[:status].to_s}'!"
@@ -225,15 +225,48 @@ module OmfRc::ResourceProxy::CMController
     end
   end
 
-  work("start_node_pxe_off") do |res, node|
+  work("start_node_pxe_off") do |res, node, action|
     symlink_name = "/tftpboot/pxe-linux.cfg/01-#{node[:node_mac]}"
     if File.exists?(symlink_name)
       File.delete(symlink_name)
     end
-
-    puts "http://#{node[:node_cm_ip].to_s}/off"
-    doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
-    puts doc
+    if action == "reset"
+      puts "http://#{node[:node_cm_ip].to_s}/reset"
+      doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
+      puts doc
+    elsif action == "shutdown"
+      puts "http://#{node[:node_cm_ip].to_s}/off"
+      doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
+      puts doc
+    end
+    
+    t = 0
+    loop do
+      sleep 2
+      status = system("ping #{node[:node_ip]} -c 2 -w 2")
+      if t < @timeout
+        if status == true
+          node[:status] = :started
+          res.inform(:status, {
+            event_type: "PXE_OFF",
+            exit_code: "0",
+            node_name: "#{node[:node_name]}",
+            msg: "Node '#{node[:node_name]}' is up withour pxe."
+          }, :ALL)
+          break
+        end
+      else
+        node[:status] = :stopped
+        res.inform(:error, {
+          event_type: "PXE_OFF  ",
+          exit_code: "-1",
+          node_name: "#{node[:node_name]}",
+          msg: "Node '#{node[:node_name]}' failed to boot."
+        }, :ALL)
+        break
+      end
+      t += 2
+    end
   end
 end
 
