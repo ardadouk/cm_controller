@@ -226,7 +226,7 @@ module OmfRc::ResourceProxy::CMController
   end
 
   work("start_node_pxe_off") do |res, node, action|
-    symlink_name = "/tftpboot/pxe-linux.cfg/01-#{node[:node_mac]}"
+    symlink_name = "/tftpboot/pxelinux.cfg/01-#{node[:node_mac]}"
     if File.exists?(symlink_name)
       File.delete(symlink_name)
     end
@@ -239,7 +239,7 @@ module OmfRc::ResourceProxy::CMController
       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
       puts doc
     end
-    
+
     t = 0
     loop do
       sleep 2
@@ -251,7 +251,7 @@ module OmfRc::ResourceProxy::CMController
             event_type: "PXE_OFF",
             exit_code: "0",
             node_name: "#{node[:node_name]}",
-            msg: "Node '#{node[:node_name]}' is up withour pxe."
+            msg: "Node '#{node[:node_name]}' is up without pxe."
           }, :ALL)
           break
         end
