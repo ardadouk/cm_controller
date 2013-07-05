@@ -258,7 +258,7 @@ module OmfRc::ResourceProxy::CMController
       else
         node[:status] = :stopped
         res.inform(:error, {
-          event_type: "PXE_OFF  ",
+          event_type: "PXE_OFF",
           exit_code: "-1",
           node_name: "#{node[:node_name]}",
           msg: "Node '#{node[:node_name]}' failed to boot."
