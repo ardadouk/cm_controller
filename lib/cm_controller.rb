@@ -110,6 +110,12 @@ module OmfRc::ResourceProxy::CMController
     puts "http://#{node[:node_cm_ip].to_s}/on"
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/on"))
     puts doc
+    res.inform(:status, {
+      event_type: "START_NODE",
+      exit_code: "0",
+      node_name: "#{node[:node_name].to_s}",
+      msg: "#{doc.xpath("//Response").text}"
+    }, :ALL)
     t = 0
     loop do
       sleep 2
@@ -143,14 +149,20 @@ module OmfRc::ResourceProxy::CMController
     puts "http://#{node[:node_cm_ip].to_s}/off"
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
     puts doc
-    sleep 3
+    res.inform(:status, {
+      event_type: "START_NODE",
+      exit_code: "0",
+      node_name: "#{node[:node_name].to_s}",
+      msg: "#{doc.xpath("//Response").text}"
+    }, :ALL)
     t = 0
     loop do
       sleep 2
       status = system("ping #{node[:node_ip]} -c 2 -w 2")
+      puts status.to_s
       if t < @timeout
         if status == false
-          node[:status] = :started
+          node[:status] = :stopped
           res.inform(:status, {
             event_type: "EXIT",
             exit_code: "0",
@@ -160,7 +172,7 @@ module OmfRc::ResourceProxy::CMController
           break
         end
       else
-        node[:status] = :stopped
+        node[:status] = :started
         res.inform(:error, {
           event_type: "EXIT",
           exit_code: "-1",
