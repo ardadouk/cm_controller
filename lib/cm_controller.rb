@@ -150,7 +150,7 @@ module OmfRc::ResourceProxy::CMController
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
     puts doc
     res.inform(:status, {
-      event_type: "START_NODE",
+      event_type: "STOP_NODE",
       exit_code: "0",
       node_name: "#{node[:node_name].to_s}",
       msg: "#{doc.xpath("//Response").text}"
@@ -159,6 +159,7 @@ module OmfRc::ResourceProxy::CMController
     loop do
       sleep 2
       status = system("ping #{node[:node_ip]} -c 2 -w 2")
+      puts status.to_s
       if t < @timeout
         if status == false
           node[:status] = :stopped
