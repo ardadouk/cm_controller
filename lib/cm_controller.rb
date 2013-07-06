@@ -189,6 +189,12 @@ module OmfRc::ResourceProxy::CMController
     puts "http://#{node[:node_cm_ip].to_s}/reset"
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
     puts doc
+    res.inform(:status, {
+      event_type: "RESET_NODE",
+      exit_code: "0",
+      node_name: "#{node[:node_name].to_s}",
+      msg: "#{doc.xpath("//Response").text}"
+    }, :ALL)
   end
 
   work("start_node_pxe") do |res, node|
