@@ -159,7 +159,6 @@ module OmfRc::ResourceProxy::CMController
     loop do
       sleep 2
       status = system("ping #{node[:node_ip]} -c 2 -w 2")
-      puts status.to_s
       if t < @timeout
         if status == false
           node[:status] = :stopped
