@@ -15,7 +15,7 @@ $stdout.sync = true
 
 module OmfRc::ResourceProxy::CMController
   include OmfRc::ResourceProxyDSL
-  @timeout = 30
+  @timeout = 120
 
   register_proxy :cmController
 
