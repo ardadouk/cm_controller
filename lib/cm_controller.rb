@@ -235,10 +235,7 @@ module OmfRc::ResourceProxy::CMController
   end
 
   work("start_node_pxe") do |res, node|
-    symlink_name = "/tftpboot/pxelinux.cfg/01-#{node[:node_mac]}"
-    if !File.exists?("#{symlink_name}")
-      File.symlink("/tftpboot/pxelinux.cfg/omf-5.4", "#{symlink_name}")
-    end
+
     #TODO here add find status call and then act accordingly
 #     if node[:status] == :stopped
 #       puts "http://#{node[:node_cm_ip].to_s}/on"
@@ -253,13 +250,22 @@ module OmfRc::ResourceProxy::CMController
 #     end
     resp = res.get_status(node)
     if resp == :on
+      symlink_name = "/tftpboot/pxelinux.cfg/01-#{node[:node_mac]}"
+      if !File.exists?("#{symlink_name}")
+        File.symlink("/tftpboot/pxelinux.cfg/omf-5.4", "#{symlink_name}")
+      end
       puts "http://#{node[:node_cm_ip].to_s}/reset"
       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
     elsif resp == :off
+      symlink_name = "/tftpboot/pxelinux.cfg/01-#{node[:node_mac]}"
+      if !File.exists?("#{symlink_name}")
+        File.symlink("/tftpboot/pxelinux.cfg/omf-5.4", "#{symlink_name}")
+      end
       puts "http://#{node[:node_cm_ip].to_s}/on"
       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/on"))
     elsif resp == :started_on_pxe
-      #do nothing?
+      puts "http://#{node[:node_cm_ip].to_s}/reset"
+      doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
     end
 
     t = 0
