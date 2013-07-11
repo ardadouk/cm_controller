@@ -26,7 +26,7 @@ module OmfRc::ResourceProxy::CMController
     @nodes = @config[:nodes]
     puts "### nodes: #{@nodes}"
     @nodes.each do |node|
-      tmp = {node_name: node[0], node_ip: node[1][:ip], node_mac: node[1][:mac], node_cm_ip: node[1][:cm_ip], status: :stopped}
+      tmp = {node_name: node[0], node_ip: node[1][:ip], node_mac: node[1][:mac], node_cm_ip: node[1][:cm_ip]}
       res.property.all_nodes << tmp
     end
   end
@@ -80,7 +80,7 @@ module OmfRc::ResourceProxy::CMController
     when :reset then res.reset_node(node)
     when :start_on_pxe then res.start_node_pxe(node)
     when :start_without_pxe then res.start_node_pxe_off(node, value[:last_action])
-    when :get_status then res.get_status(node)
+    when :get_status then res.status(node)
     else
       res.log_inform_warn "Cannot switch node to unknown state '#{value[:status].to_s}'!"
     end
@@ -92,6 +92,23 @@ module OmfRc::ResourceProxy::CMController
   end
 
   work("get_status") do |res, node|
+    puts "http://#{node[:node_cm_ip].to_s}/status"
+    doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/status"))
+    resp = doc.xpath("//Measurement//type//value").text.strip
+
+    if resp == 'on'
+      symlink_name = "/tftpboot/pxelinux.cfg/01-#{node[:node_mac]}"
+      if File.exists?("#{symlink_name}")
+        return :on_pxe
+      else
+        return :on
+      end
+    elsif resp == 'off'
+      return :off
+    end
+  end
+
+  work('status') do |res, node|
     puts "http://#{node[:node_cm_ip].to_s}/status"
     doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/status"))
     puts doc
@@ -120,7 +137,6 @@ module OmfRc::ResourceProxy::CMController
       status = system("ping #{node[:node_ip]} -c 2 -w 2")
       if t < @timeout
         if status == true
-          node[:status] = :started
           res.inform(:status, {
             event_type: "EXIT",
             exit_code: "0",
@@ -130,7 +146,6 @@ module OmfRc::ResourceProxy::CMController
           break
         end
       else
-        node[:status] = :stopped
         res.inform(:error, {
           event_type: "EXIT",
           exit_code: "-1",
@@ -160,7 +175,6 @@ module OmfRc::ResourceProxy::CMController
       puts status.to_s
       if t < @timeout
         if status == false
-          node[:status] = :stopped
           res.inform(:status, {
             event_type: "EXIT",
             exit_code: "0",
@@ -170,7 +184,6 @@ module OmfRc::ResourceProxy::CMController
           break
         end
       else
-        node[:status] = :started
         res.inform(:error, {
           event_type: "EXIT",
           exit_code: "-1",
@@ -193,6 +206,32 @@ module OmfRc::ResourceProxy::CMController
       node_name: "#{node[:node_name].to_s}",
       msg: "#{doc.xpath("//Response").text}"
     }, :ALL)
+
+    t = 0
+    loop do
+      sleep 2
+      status = system("ping #{node[:node_ip]} -c 2 -w 2")
+      if t < @timeout
+        if status == true
+          res.inform(:status, {
+            event_type: "EXIT",
+            exit_code: "0",
+            node_name: "#{node[:node_name].to_s}",
+            msg: "Node '#{node[:node_name].to_s}' is up."
+          }, :ALL)
+          break
+        end
+      else
+        res.inform(:error, {
+          event_type: "EXIT",
+          exit_code: "-1",
+          node_name: "#{node[:node_name].to_s}",
+          msg: "Node '#{node[:node_name].to_s}' failed to start up."
+        }, :ALL)
+        break
+      end
+      t += 2
+    end
   end
 
   work("start_node_pxe") do |res, node|
@@ -200,15 +239,26 @@ module OmfRc::ResourceProxy::CMController
     if !File.exists?("#{symlink_name}")
       File.symlink("/tftpboot/pxelinux.cfg/omf-5.4", "#{symlink_name}")
     end
-    if node[:status] == :stopped
-      puts "http://#{node[:node_cm_ip].to_s}/on"
-      doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/on"))
-      msg = doc
-    elsif node[:status] == :started
+    #TODO here add find status call and then act accordingly
+#     if node[:status] == :stopped
+#       puts "http://#{node[:node_cm_ip].to_s}/on"
+#       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/on"))
+#       msg = doc
+#     elsif node[:status] == :started
+#       puts "http://#{node[:node_cm_ip].to_s}/reset"
+#       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
+#       msg = doc
+#     elsif node[:status] == :started_on_pxe
+#       #do nothing?
+#     end
+    resp = res.get_status(node)
+    if resp == :on
       puts "http://#{node[:node_cm_ip].to_s}/reset"
       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
-      msg = doc
-    elsif node[:status] == :started_on_pxe
+    elsif resp == :off
+      puts "http://#{node[:node_cm_ip].to_s}/on"
+      doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/on"))
+    elsif resp == :started_on_pxe
       #do nothing?
     end
 
@@ -218,7 +268,6 @@ module OmfRc::ResourceProxy::CMController
       status = system("ping #{node[:node_ip]} -c 2 -w 2")
       if t < @timeout
         if status == true
-          node[:status] = :started_on_pxe
           res.inform(:status, {
             event_type: "PXE",
             exit_code: "0",
@@ -228,7 +277,6 @@ module OmfRc::ResourceProxy::CMController
           break
         end
       else
-        node[:status] = :stopped
         res.inform(:error, {
           event_type: "PXE",
           exit_code: "-1",
@@ -256,7 +304,6 @@ module OmfRc::ResourceProxy::CMController
         status = system("ping #{node[:node_ip]} -c 2 -w 2")
         if t < @timeout
           if status == true
-            node[:status] = :started
             res.inform(:status, {
               event_type: "PXE_OFF",
               exit_code: "0",
@@ -266,7 +313,6 @@ module OmfRc::ResourceProxy::CMController
             break
           end
         else
-          node[:status] = :stopped
           res.inform(:error, {
             event_type: "PXE_OFF",
             exit_code: "-1",
@@ -287,7 +333,6 @@ module OmfRc::ResourceProxy::CMController
         status = system("ping #{node[:node_ip]} -c 2 -w 2")
         if t < @timeout
           if status == false
-            node[:status] = :started
             res.inform(:status, {
               event_type: "PXE_OFF",
               exit_code: "0",
@@ -297,7 +342,6 @@ module OmfRc::ResourceProxy::CMController
             break
           end
         else
-          node[:status] = :stopped
           res.inform(:error, {
             event_type: "PXE_OFF",
             exit_code: "-1",
@@ -309,8 +353,6 @@ module OmfRc::ResourceProxy::CMController
         t += 2
       end
     end
-
-
   end
 end
 
