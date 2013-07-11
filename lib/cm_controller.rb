@@ -99,12 +99,12 @@ module OmfRc::ResourceProxy::CMController
     if resp == 'on'
       symlink_name = "/tftpboot/pxelinux.cfg/01-#{node[:node_mac]}"
       if File.exists?("#{symlink_name}")
-        return :on_pxe
+        :on_pxe
       else
-        return :on
+        :on
       end
     elsif resp == 'off'
-      return :off
+      :off
     end
   end
 
