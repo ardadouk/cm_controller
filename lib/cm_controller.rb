@@ -5,9 +5,7 @@ require 'yaml'
 require 'open-uri'
 require 'nokogiri'
 
-
 $stdout.sync = true
-
 
 @config = YAML.load_file('../etc/configuration.yaml')
 @auth = @config[:auth]
