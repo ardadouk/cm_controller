@@ -252,39 +252,67 @@ module OmfRc::ResourceProxy::CMController
       puts "http://#{node[:node_cm_ip].to_s}/reset"
       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/reset"))
       puts doc
+      t = 0
+      loop do
+        sleep 2
+        status = system("ping #{node[:node_ip]} -c 2 -w 2")
+        if t < @timeout
+          if status == true
+            node[:status] = :started
+            res.inform(:status, {
+              event_type: "PXE_OFF",
+              exit_code: "0",
+              node_name: "#{node[:node_name]}",
+              msg: "Node '#{node[:node_name]}' is up."
+            }, :ALL)
+            break
+          end
+        else
+          node[:status] = :stopped
+          res.inform(:error, {
+            event_type: "PXE_OFF",
+            exit_code: "-1",
+            node_name: "#{node[:node_name]}",
+            msg: "Node '#{node[:node_name]}' timed out while trying to boot."
+          }, :ALL)
+          break
+        end
+        t += 2
+      end
     elsif action == "shutdown"
       puts "http://#{node[:node_cm_ip].to_s}/off"
       doc = Nokogiri::XML(open("http://#{node[:node_cm_ip].to_s}/off"))
       puts doc
-    end
-
-    t = 0
-    loop do
-      sleep 2
-      status = system("ping #{node[:node_ip]} -c 2 -w 2")
-      if t < @timeout
-        if status == true
-          node[:status] = :started
-          res.inform(:status, {
+      t = 0
+      loop do
+        sleep 2
+        status = system("ping #{node[:node_ip]} -c 2 -w 2")
+        if t < @timeout
+          if status == false
+            node[:status] = :started
+            res.inform(:status, {
+              event_type: "PXE_OFF",
+              exit_code: "0",
+              node_name: "#{node[:node_name]}",
+              msg: "Node '#{node[:node_name]}' is shutted down."
+            }, :ALL)
+            break
+          end
+        else
+          node[:status] = :stopped
+          res.inform(:error, {
             event_type: "PXE_OFF",
-            exit_code: "0",
+            exit_code: "-1",
             node_name: "#{node[:node_name]}",
-            msg: "Node '#{node[:node_name]}' is up without pxe."
+            msg: "Node '#{node[:node_name]}' timed out while trying to shutdown."
           }, :ALL)
           break
         end
-      else
-        node[:status] = :stopped
-        res.inform(:error, {
-          event_type: "PXE_OFF",
-          exit_code: "-1",
-          node_name: "#{node[:node_name]}",
-          msg: "Node '#{node[:node_name]}' failed to boot."
-        }, :ALL)
-        break
+        t += 2
       end
-      t += 2
     end
+
+
   end
 end
 
