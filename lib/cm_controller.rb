@@ -263,14 +263,14 @@ module OmfRc::ResourceProxy::CMController
 
     if res.wait_until_ping(node[:node_ip])
       res.inform(:status, {
-        event_type: "EXIT",
+        event_type: "PXE",
         exit_code: "0",
         node_name: "#{node[:node_name].to_s}",
         msg: "Node '#{node[:node_name].to_s}' is up on PXE."
       }, :ALL)
     else
       res.inform(:error, {
-        event_type: "EXIT",
+        event_type: "PXE",
         exit_code: "-1",
         node_name: "#{node[:node_name].to_s}",
         msg: "Node '#{node[:node_name].to_s}' timed out while trying to boot on PXE."
@@ -290,14 +290,14 @@ module OmfRc::ResourceProxy::CMController
       t = 0
       if res.wait_until_ping(node[:node_ip])
         res.inform(:status, {
-          event_type: "EXIT",
+          event_type: "PXE_OFF",
           exit_code: "0",
           node_name: "#{node[:node_name].to_s}",
           msg: "Node '#{node[:node_name].to_s}' is up."
         }, :ALL)
       else
         res.inform(:error, {
-          event_type: "EXIT",
+          event_type: "PXE_OFF",
           exit_code: "-1",
           node_name: "#{node[:node_name].to_s}",
           msg: "Node '#{node[:node_name].to_s}' timed out while booting."
