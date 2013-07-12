@@ -88,38 +88,42 @@ module OmfRc::ResourceProxy::CMController
 
   work("wait_until_ping") do |res, ip|
     t = 0
+    resp = false
     loop do
       sleep 2
       status = system("ping #{ip} -c 2 -w 2")
       if t < @timeout
         if status == true
-          true
+          resp = true
           break
         end
       else
-        false
+        resp = false
         break
       end
       t += 2
     end
+    resp
   end
 
   work("wait_until_no_ping") do |res, ip|
     t = 0
+    resp = false
     loop do
       sleep 2
       status = system("ping #{ip} -c 2 -w 2")
       if t < @timeout
         if status == false
-          true
+          resp = true
           break
         end
       else
-        false
+        resp = false
         break
       end
       t += 2
     end
+    resp
   end
 
   work("get_status") do |res, node|
